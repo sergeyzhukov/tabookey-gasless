@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
 	"io/ioutil"
 	"librelay"
 	"librelay/txstore"
@@ -17,6 +14,10 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 const VERSION = "0.4.0"
@@ -167,7 +168,7 @@ func relayHandler(w http.ResponseWriter, r *http.Request) {
 
 func parseCommandLine() (relayParams librelay.RelayParams) {
 	ownerAddress := flag.String("OwnerAddress", common.HexToAddress("0").Hex(), "Relay's owner address")
-	fee := flag.Int64("Fee", 11, "Relay's per transaction fee")
+	fee := flag.Int64("Fee", 0, "Relay's per transaction fee")
 	urlStr := flag.String("Url", "http://localhost:8090", "Relay server's url ")
 	port := flag.String("Port", "", "Relay server's port")
 	relayHubAddress := flag.String("RelayHubAddress", "0x254dffcd3277c0b1660f6d42efbb754edababc2b", "RelayHub address")
@@ -179,10 +180,12 @@ func parseCommandLine() (relayParams librelay.RelayParams) {
 	registrationBlockRate := flag.Uint64("RegistrationBlockRate", 5800, "Relay registeration rate (in blocks)")
 	ethereumNodeUrl := flag.String("EthereumNodeUrl", "http://localhost:8545", "The relay's ethereum node")
 	workdir := flag.String("Workdir", filepath.Join(os.Getenv("PWD"), "build/server"), "The relay server's workdir")
+	registrationURL := flag.String("RegistrationURL", "http://localhost:8090", "Relay registered url")
 	flag.BoolVar(&shortSleep, "ShortSleep", false, "Whether we wait after calls to blockchain or return (almost) immediately")
 
 	flag.Parse()
 
+	relayParams.RegistrationURL = *registrationURL
 	relayParams.OwnerAddress = common.HexToAddress(*ownerAddress)
 	relayParams.Fee = big.NewInt(*fee)
 	relayParams.Url = *urlStr
@@ -232,7 +235,7 @@ func configRelay(relayParams librelay.RelayParams) {
 	}
 	relay, err = librelay.NewRelayServer(
 		relayParams.OwnerAddress, relayParams.Fee, relayParams.Url, relayParams.Port,
-		relayParams.RelayHubAddress, relayParams.StakeAmount,
+		relayParams.RegistrationURL, relayParams.RelayHubAddress, relayParams.StakeAmount,
 		relayParams.GasLimit, relayParams.DefaultGasPrice, relayParams.GasPricePercent,
 		privateKey, relayParams.UnstakeDelay, relayParams.RegistrationBlockRate, relayParams.EthereumNodeURL,
 		client, txStore, nil)

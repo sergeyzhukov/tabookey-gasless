@@ -133,6 +133,7 @@ type RelayServer struct {
 	Fee                   *big.Int
 	Url                   string
 	Port                  string
+	RegistrationURL       string
 	RelayHubAddress       common.Address
 	StakeAmount           *big.Int
 	GasLimit              uint64
@@ -167,6 +168,7 @@ func NewRelayServer(
 	Fee *big.Int,
 	Url string,
 	Port string,
+	RegistrationURL string,
 	RelayHubAddress common.Address,
 	StakeAmount *big.Int,
 	GasLimit uint64,
@@ -199,6 +201,7 @@ func NewRelayServer(
 		Fee:                   Fee,
 		Url:                   Url,
 		Port:                  Port,
+		RegistrationURL:       RegistrationURL,
 		RelayHubAddress:       RelayHubAddress,
 		StakeAmount:           StakeAmount,
 		GasLimit:              GasLimit,
@@ -248,7 +251,7 @@ func (relay *RelayServer) RegisterRelay() (err error) {
 }
 
 func (relay *RelayServer) sendRegisterTransaction() (tx *types.Transaction, err error) {
-	desc := fmt.Sprintf("RegisterRelay(address=%s, url=%s)", relay.RelayHubAddress.Hex(), relay.Url)
+	desc := fmt.Sprintf("RegisterRelay(address=%s, url=%s)", relay.RelayHubAddress.Hex(), relay.RegistrationURL)
 	tx, err = relay.sendDataTransaction(desc, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return relay.rhub.RegisterRelay(auth, relay.Fee, relay.Url)
 	})
@@ -515,7 +518,7 @@ func (relay *RelayServer) CreateRelayTransaction(request RelayTransactionRequest
 	gasLimit.Add(gasLimit, acceptRelayedCallMaxGas)
 	gasLimit.Add(gasLimit, postRelayedCallMaxGas)
 	gasLimit.Add(gasLimit, preRelayedCallMaxGas)
-	log.Println("Estimated max charge of relayed tx:",maxCharge, "GasLimit of relayed tx:",gasLimit)
+	log.Println("Estimated max charge of relayed tx:", maxCharge, "GasLimit of relayed tx:", gasLimit)
 
 	signedTx, err = relay.sendDataTransaction(
 		fmt.Sprintf("Relay(from=%s, to=%s)", request.From.Hex(), request.To.Hex()),

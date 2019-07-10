@@ -3,9 +3,8 @@
 if [ "$1" == "help" ]; then
 
 echo Usage:
-echo "  $0 test - run all tests, and exit"
-echo "  $0      - (no args) start HttpRelayServer, and wait"
-echo "  $0 web  - start HttpRelayServer and sample MetaCoin web app (downloaded into \"webpack-box\" subfolder"
+echo "  $0 provider - Connect to external provider with relayhub Addr and other params too"
+echo "  $0      - (no args) start HttpRelayServer with ganache and default parameters, and wait"
 exit 1
 
 else 
@@ -37,6 +36,8 @@ blocktime=${T=0}
 pkill -f ganache-cli && echo killed old ganache.
 pkill -f RelayHttpServer && echo kill old relayserver
 
+if [ "$withOutGanache" != "true" ]; then
+
 GANACHE="$root/node_modules/.bin/ganache-cli -l 8000000 -b $blocktime -a 11 -h 0.0.0.0 "
 
 if [ -n "$DEBUG" ]; then
@@ -55,6 +56,8 @@ fi
 
 hubaddr=`truffle migrate | tee /dev/stderr | grep -A 4 "RelayHub" | grep "contract address" | grep "0x.*" -o`
 
+echo $hubaddr
+
 if [ -z "$hubaddr" ]; then
 echo "FATAL: failed to detect RelayHub address"
 exit 1
@@ -62,36 +65,29 @@ fi
 
 #fund relay:
 relayurl=http://localhost:8090
-( sleep 1 ; ./scripts/fundrelay.js $hubaddr $relayurl 0 ) &
+( sleep 5 ; ./scripts/fundrelay.js $hubaddr $relayurl 0 ) &
 
-if [ -n "$1" ]; then
 
-$gobin/RelayHttpServer -RelayHubAddress $hubaddr -Workdir $root/build/server &
+$gobin/RelayHttpServer -RelayHubAddress $hubaddr -Workdir $root/build/server -RegistrationURL http://localhost:8090
 
-cd $root
-sleep 1
-
-case "$*" in
-	test) 	cmd="truffle test" ;; 
-	test/*) cmd="truffle test $*" ;;
-	web)	cmd="./init_metacoin.sh web" ;;
-	*)	echo "Unknown command. do '$0 help'"; exit 1 ;;
-esac
-
-echo "Running: $cmd"
-if eval $cmd
-then
-	echo command completed successfully
 else
-	exitcode=$?
-	echo command failed
+if [ -z "$registrationURL" ]; then
+	registrationURL="http://localhost:8090"
 fi
 
-exit $exitcode
+if [ -z "$provider" ]; then
+	provider="http://localhost:8545"
+fi
 
-else
+if [ -z "$gasLimit" ]; then
+	gasLimit="100000"
+fi
 
-$gobin/RelayHttpServer -RelayHubAddress $hubaddr -Workdir $root/build/server
+if [ -z "$defaultGasPrice" ]; then
+	defaultGasPrice="10000000000"
+fi
+	
+
+$gobin/RelayHttpServer -RelayHubAddress $hubaddr -Workdir $root/build/server -RegistrationURL $registrationURL -EthereumNodeUrl $provider -GasLimit $gasLimit -DefaultGasPrice $defaultGasPrice
 	
 fi
-
